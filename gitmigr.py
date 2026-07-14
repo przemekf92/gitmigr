@@ -87,7 +87,8 @@ class Gitmigr:
     if self.getgitmajorver() < 2: raise Exception("git 2 required")
     if optsearch:
       self.infoprint("* Started filesystem search...")
-      repos2 = subprocess.run(["find"]+repos+["-name", ".git", "-print0"], check=True, stdout=subprocess.PIPE).stdout.decode().rstrip("\x00").split("\x00")
+      repos2 = subprocess.run(["find"]+repos+["-name", ".git", "-print0"], check=True, stdout=subprocess.PIPE).stdout.decode().split("\x00")
+      if repos2[-1] == "": repos2 = repos2[0:-1]
       self.infoprint("* Finished filesystem search")
     else:
       repos2 = repos
@@ -143,7 +144,7 @@ class Gitmigr:
     self.infoprint("* Processed "+str(len(repograph))+" git repositories. "+("Migrated " if optwrite else "Would migrate ")+str(migrconfigcount)+" of "+str(allconfigcount)+" \"config\" files and "+str(migrgitmodulescount)+" of "+str(allgitmodulescount)+" \".gitmodules\" files.")
     if migrgitmodulescount > 0:
       self.warnprint("* Some .gitmodules files "+("have been" if optwrite else "would be")+" migrated, but you are responsible for commiting them.")
-    if not optwrite:
+    if (not optwrite) and (migrconfigcount > 0 or migrgitmodulescount > 0):
       self.infoprint("* Repeat with --write option added before the arguments to actually write the changes.")
   def procfil(self, oldpat: str, newrepl: str, fil: str, optwrite: bool) -> bool:
     with open(fil, "r", encoding="UTF-8", newline="") as f:
