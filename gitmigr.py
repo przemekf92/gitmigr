@@ -5,36 +5,40 @@ import re
 import os
 import sys
 from typing import Dict, List, Optional
-def exitusage1():
-  sys.stderr.write("  Usage:\n")
-  sys.stderr.write("  "+sys.argv[0]+" [OPT...] OLDPAT NEWREPL REPO...\n")
-  sys.stderr.write("  OLDPAT: Old URL pattern in Python regex format\n")
-  sys.stderr.write("  NEWREPL: New URL replacement in Python regex format\n")
-  sys.stderr.write("  REPO: Path to the repository, either the root of the repository or .git inside the repository. You can pass multiple repositories.\n")
-  sys.stderr.write("  Options:\n")
-  sys.stderr.write("  --write: Write changes to disk\n")
-  sys.stderr.write("  --search: Do a filesystem search on the provided directories to find all git repositories located there\n")
-  sys.stderr.write("  --printlvl dbg|verb|info|warn: Only print messages of this level and above (default: "+DEFAULTPRINTLVL.name.lower()+")\n")
-  sys.stderr.write("  --colourlvl info|warn|err|none: Highlight with red colour messages of this level and above (default: "+DEFAULTCOLOURLVL.name.lower()+")\n")
-  sys.stderr.write("  Examples\n")
-  sys.stderr.write("  Migrate a repository:\n")
-  sys.stderr.write("  "+sys.argv[0]+" 'olduser@oldhost\\.olddomain:olddir/' 'newuser@newhost.newdomain:newdir/' /path/to/repo\n")
-  sys.stderr.write("  Migrate multiple repositories:\n")
-  sys.stderr.write("  "+sys.argv[0]+" 'olduser@oldhost\\.olddomain:olddir/' 'newuser@newhost.newdomain:newdir/' ~/repo1 ~/repo2\n")
-  sys.stderr.write("  Search a directory for repositories and migrate them:\n")
-  sys.stderr.write("  "+sys.argv[0]+" --search 'olduser@oldhost\\.olddomain:olddir/' 'newuser@newhost.newdomain:newdir/' ~\n")
-  sys.stderr.write("  Search multiple directories for repositories and migrate them:\n")
-  sys.stderr.write("  "+sys.argv[0]+" --search 'olduser@oldhost\\.olddomain:olddir/' 'newuser@newhost.newdomain:newdir/' ~/dir1 ~/dir2\n")
-  sys.stderr.write("  If you need more control over filesystem search than --search provides, use \"find\" and \"xargs\":\n")
-  sys.stderr.write("  find ~/dir1 ~/dir2 -name .git -print0 | xargs -0 "+sys.argv[0]+" 'olduser@oldhost\\.olddomain:olddir/' 'newuser@newhost.newdomain:newdir/'\n")
-  sys.stderr.write("  By default migration is simulated, to actually write changes add --write:\n")
-  sys.stderr.write("  "+sys.argv[0]+" --write 'olduser@oldhost\\.olddomain:olddir/' 'newuser@newhost.newdomain:newdir/' /path/to/repo\n")
-  exit(1)
+def exitusage(code: int=1, usestdout: bool=False):
+  out = (sys.stdout if usestdout else sys.stderr)
+  out.write("  Usage:\n")
+  out.write("  "+sys.argv[0]+" [OPT...] OLDPAT NEWREPL REPO...\n")
+  out.write("  OLDPAT: Old URL pattern in Python regex format\n")
+  out.write("  NEWREPL: New URL replacement in Python regex format\n")
+  out.write("  REPO: Path to the repository, either the root of the repository or .git inside the repository. You can pass multiple repositories.\n")
+  out.write("  Options:\n")
+  out.write("  --write: Write changes to disk\n")
+  out.write("  --search: Do a filesystem search on the provided directories to find all git repositories located there\n")
+  out.write("  --printlvl dbg|verb|info|warn: Only print messages of this level and above (default: "+DEFAULTPRINTLVL.name.lower()+")\n")
+  out.write("  --colourlvl info|warn|err|none: Highlight with red colour messages of this level and above (default: "+DEFAULTCOLOURLVL.name.lower()+")\n")
+  out.write("  --git VAL: Change the git executable to use (default: git)\n")
+  out.write("  --help: Show this help\n")
+  out.write("  Examples\n")
+  out.write("  Migrate a repository:\n")
+  out.write("  "+sys.argv[0]+" 'olduser@oldhost\\.olddomain:olddir/' 'newuser@newhost.newdomain:newdir/' /path/to/repo\n")
+  out.write("  Migrate multiple repositories:\n")
+  out.write("  "+sys.argv[0]+" 'olduser@oldhost\\.olddomain:olddir/' 'newuser@newhost.newdomain:newdir/' ~/repo1 ~/repo2\n")
+  out.write("  Search a directory for repositories and migrate them:\n")
+  out.write("  "+sys.argv[0]+" --search 'olduser@oldhost\\.olddomain:olddir/' 'newuser@newhost.newdomain:newdir/' ~\n")
+  out.write("  Search multiple directories for repositories and migrate them:\n")
+  out.write("  "+sys.argv[0]+" --search 'olduser@oldhost\\.olddomain:olddir/' 'newuser@newhost.newdomain:newdir/' ~/dir1 ~/dir2\n")
+  out.write("  If you need more control over filesystem search than --search provides, use \"find\" and \"xargs\":\n")
+  out.write("  find ~/dir1 ~/dir2 -name .git -print0 | xargs -0 "+sys.argv[0]+" 'olduser@oldhost\\.olddomain:olddir/' 'newuser@newhost.newdomain:newdir/'\n")
+  out.write("  By default migration is simulated, to actually write changes add --write:\n")
+  out.write("  "+sys.argv[0]+" --write 'olduser@oldhost\\.olddomain:olddir/' 'newuser@newhost.newdomain:newdir/' /path/to/repo\n")
+  exit(code)
 def main() -> None:
   optwrite: Optional[bool] = None
   optsearch: Optional[bool] = None
   optprintlvl: Optional["Printlvl"] = None
   optcolourlvl: Optional["Printlvl"] = None
+  optgit: Optional[str] = None
   args = sys.argv[1:]
   while len(args) >= 1 and args[0].startswith("-"):
     opt = args.pop(0)
@@ -48,39 +52,48 @@ def main() -> None:
       if len(args)<1:
         sys.stderr.write("Missing value of option "+opt+"\n")
         sys.stderr.write("\n")
-        exitusage1()
+        exitusage()
       val = args.pop(0).lower()
       try:
         optprintlvl = Printlvl[val.upper()]
       except KeyError:
         sys.stderr.write("Invalid value of option "+opt+": "+repr(val)+"\n")
         sys.stderr.write("\n")
-        exitusage1()
+        exitusage()
     elif opt == "--colourlvl":
       if len(args)<1:
         sys.stderr.write("Missing value of option "+opt+"\n")
         sys.stderr.write("\n")
-        exitusage1()
+        exitusage()
       val = args.pop(0).lower()
       try:
         optcolourlvl = Printlvl[val.upper()]
       except KeyError:
         sys.stderr.write("Invalid value of option "+opt+": "+repr(val)+"\n")
         sys.stderr.write("\n")
-        exitusage1()
+        exitusage()
+    elif opt == "--git":
+      if len(args)<1:
+        sys.stderr.write("Missing value of option "+opt+"\n")
+        sys.stderr.write("\n")
+        exitusage()
+      optgit = args.pop(0)
+    elif opt == "--help":
+      exitusage(code=0, usestdout=True)
     else:
       sys.stderr.write("Invalid option: "+opt+"\n")
       sys.stderr.write("\n")
-      exitusage1()
-  if not (len(args)>=3): exitusage1()
+      exitusage()
+  if not (len(args)>=3): exitusage()
   oldpat = args[0]
   newrepl = args[1]
   repos = args[2:]
-  Gitmigr(optprintlvl=optprintlvl, optcolourlvl=optcolourlvl).gitmigr(oldpat, newrepl, repos, optwrite=optwrite, optsearch=optsearch)
+  Gitmigr(optprintlvl=optprintlvl, optcolourlvl=optcolourlvl, optgit=optgit).gitmigr(oldpat, newrepl, repos, optwrite=optwrite, optsearch=optsearch)
 class Gitmigr:
-  def __init__(self, optprintlvl: Optional["Printlvl"]=None, optcolourlvl: Optional["Printlvl"]=None):
+  def __init__(self, optprintlvl: Optional["Printlvl"]=None, optcolourlvl: Optional["Printlvl"]=None, optgit: Optional[str]=None):
     self.optprintlvl: "Printlvl" = (DEFAULTPRINTLVL if optprintlvl is None else optprintlvl)
     self.optcolourlvl: "Printlvl" = (DEFAULTCOLOURLVL if optcolourlvl is None else optcolourlvl)
+    self.optgit: str = (optgit if optgit else "git")
   def gitmigr(self, oldpat: str, newrepl: str, repos: List[str], optwrite: Optional[bool]=None, optsearch: Optional[bool]=None):
     if optwrite == None: optwrite = False
     if optsearch == None: optsearch = False
@@ -222,16 +235,16 @@ class Gitmigr:
       raise Exception("the reordered graph doesn't have the same content as the original graph")
     return newrepograph
   def getgitmajorver(self) -> int:
-    m = re.search(r"^git version (\d+)", subprocess.run(["git", "--version"], check=True, stdout=subprocess.PIPE).stdout.decode())
+    m = re.search(r"^git version (\d+)", subprocess.run([self.optgit, "--version"], check=True, stdout=subprocess.PIPE).stdout.decode())
     if m:
       return int(m.group(1))
     else:
       raise Exception("can't get git version")
   def getdotgitdir1(self, repo: str) -> str:
       # repo must be the root of the repository, not some other dir within it, for this function to return the correct result
-    return os.path.join(repo, subprocess.run(["git", "-C", repo, "rev-parse", "--git-dir"], check=True, stdout=subprocess.PIPE).stdout.decode().rstrip())
+    return os.path.join(repo, subprocess.run([self.optgit, "-C", repo, "rev-parse", "--git-dir"], check=True, stdout=subprocess.PIPE).stdout.decode().rstrip())
   def getgitsubmods(self, repo: str, recursive: bool=False) -> List[str]:
-    a=re.split(r"\r\n|\r|\n", subprocess.run(["git", "-C", repo, "submodule", "foreach", "--quiet"]+(["--recursive"] if recursive else [])+["pwd"], check=True, stdout=subprocess.PIPE).stdout.decode())
+    a=re.split(r"\r\n|\r|\n", subprocess.run([self.optgit, "-C", repo, "submodule", "foreach", "--quiet"]+(["--recursive"] if recursive else [])+["pwd"], check=True, stdout=subprocess.PIPE).stdout.decode())
     if a[-1] == "": a = a[0:-1]
     return a
   def errprint(self, x: str):

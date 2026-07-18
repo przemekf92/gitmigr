@@ -8,6 +8,8 @@
   --search: Do a filesystem search on the provided directories to find all git repositories located there
   --printlvl dbg|verb|info|warn: Only print messages of this level and above (default: verb)
   --colourlvl info|warn|err|none: Highlight with red colour messages of this level and above (default: warn)
+  --git VAL: Change the git executable to use (default: git)
+  --help: Show this help
   Examples
   Migrate a repository:
   ./gitmigr.py 'olduser@oldhost\.olddomain:olddir/' 'newuser@newhost.newdomain:newdir/' /path/to/repo
