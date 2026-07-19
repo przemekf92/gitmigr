@@ -19,6 +19,7 @@ def exitusage(code: int=1, usestdout: bool=False):
   out.write("  --colourlvl info|warn|err|none: Highlight with red colour messages of this level and above (default: "+DEFAULTCOLOURLVL.name.lower()+")\n")
   out.write("  --git VAL: Change the git executable to use (default: git)\n")
   out.write("  --help: Show this help\n")
+  out.write("\n")
   out.write("  Examples\n")
   out.write("  Migrate a repository:\n")
   out.write("  "+sys.argv[0]+" 'olduser@oldhost\\.olddomain:olddir/' 'newuser@newhost.newdomain:newdir/' /path/to/repo\n")
@@ -50,38 +51,38 @@ def main() -> None:
       optsearch = True
     elif opt == "--printlvl":
       if len(args)<1:
-        sys.stderr.write("Missing value of option "+opt+"\n")
+        sys.stderr.write("  Error: Missing value of option "+opt+"\n")
         sys.stderr.write("\n")
         exitusage()
       val = args.pop(0).lower()
       try:
         optprintlvl = Printlvl[val.upper()]
       except KeyError:
-        sys.stderr.write("Invalid value of option "+opt+": "+repr(val)+"\n")
+        sys.stderr.write("  Error: Invalid value of option "+opt+": "+repr(val)+"\n")
         sys.stderr.write("\n")
         exitusage()
     elif opt == "--colourlvl":
       if len(args)<1:
-        sys.stderr.write("Missing value of option "+opt+"\n")
+        sys.stderr.write("  Error: Missing value of option "+opt+"\n")
         sys.stderr.write("\n")
         exitusage()
       val = args.pop(0).lower()
       try:
         optcolourlvl = Printlvl[val.upper()]
       except KeyError:
-        sys.stderr.write("Invalid value of option "+opt+": "+repr(val)+"\n")
+        sys.stderr.write("  Error: Invalid value of option "+opt+": "+repr(val)+"\n")
         sys.stderr.write("\n")
         exitusage()
     elif opt == "--git":
       if len(args)<1:
-        sys.stderr.write("Missing value of option "+opt+"\n")
+        sys.stderr.write("  Error: Missing value of option "+opt+"\n")
         sys.stderr.write("\n")
         exitusage()
       optgit = args.pop(0)
     elif opt == "--help":
       exitusage(code=0, usestdout=True)
     else:
-      sys.stderr.write("Invalid option: "+opt+"\n")
+      sys.stderr.write("  Error: Invalid option: "+opt+"\n")
       sys.stderr.write("\n")
       exitusage()
   if not (len(args)>=3): exitusage()
