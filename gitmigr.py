@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import shutil
 import subprocess
 import enum
 import re
@@ -180,10 +181,9 @@ class Gitmigr:
       bakfil = fil+".bak."+str(n)
       if not os.path.exists(bakfil):
         self.infoprint("* "+("Backing up " if optwrite else "Would back up ")+fil+" as "+bakfil)
-        cmd = ["cp", "-a", fil, bakfil]
-        self.dbgprint("* "+("Running: " if optwrite else "Would run: ")+repr(cmd))
+        self.dbgprint("* "+("Calling: " if optwrite else "Would call: ")+"shutil.copy2("+repr(fil)+", "+repr(bakfil)+")")
         if optwrite:
-          subprocess.run(cmd, check=True)
+          shutil.copy2(fil, bakfil)
         return
       else:
         n += 1
