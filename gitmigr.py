@@ -95,7 +95,7 @@ class Gitmigr:
   def __init__(self, optprintlvl: Optional["Printlvl"]=None, optcolourlvl: Optional["Printlvl"]=None, optgit: Optional[str]=None):
     self.optprintlvl: "Printlvl" = (DEFAULTPRINTLVL if optprintlvl is None else optprintlvl)
     self.optcolourlvl: "Printlvl" = (DEFAULTCOLOURLVL if optcolourlvl is None else optcolourlvl)
-    self.optgit: str = (optgit if optgit else "git")
+    self.optgit: str = ("git" if optgit is None else optgit)
   def gitmigr(self, oldpat: str, newrepl: str, repos: List[str], optwrite: Optional[bool]=None, optsearch: Optional[bool]=None):
     if optwrite == None: optwrite = False
     if optsearch == None: optsearch = False
@@ -191,21 +191,33 @@ class Gitmigr:
           raise Exception("Can't back up file because too many versions already exist: "+fil)
   def searchrepos1(self, repos: List[str]) -> "RepoGraphType":
       # Takes a list of repo paths, normalizes them, searches them for submodules, deduplicates them, and orders them logically. Returns a graph. (It's implemented as a dict and a dict on Python 3.6+ preserves order like a list so there is no reason to return a list here.)
+    repos = [
+      os.path.normcase(
+        os.path.abspath(
+          os.path.normpath(repo) if os.path.basename(repo) != ".git" else os.path.normpath(os.path.dirname(repo))
+        )
+      ) for repo in repos
+    ]
     repograph: "RepoGraphType" = {}
     def searchrepos1b(parent: Optional[str], repos: List[str]) -> None:
-      for repo1 in repos:
-        repo2 = os.path.normpath(repo1)
-        if os.path.basename(repo2) == ".git":
-          repo = os.path.normpath(os.path.dirname(repo2))
-        else:
-          repo = repo2
+      for repo in repos:
         if not os.path.exists(repo):
           raise Exception("repo does not exist: "+repo)
         if not os.path.exists(os.path.join(repo, ".git")):
           raise Exception("not a git repo: "+repo)
         if repo not in repograph:
-          submods = self.getgitsubmods(repo, recursive=False)
-          repograph[repo] = RepoGraphEnt(repo=repo, parent=parent, submods=submods)
+          submods = [
+            os.path.normcase(
+              os.path.normpath(
+                os.path.abspath(submod)
+              )
+            ) for submod in self.getgitsubmods(
+              repo, recursive=False
+            )
+          ]
+          repograph[repo] = RepoGraphEnt(
+            repo=repo, parent=parent, submods=submods
+          )
           searchrepos1b(repo, submods)
         else:
             # Update the parent if needed. No need to search submodules again.
@@ -236,16 +248,33 @@ class Gitmigr:
       raise Exception("the reordered graph doesn't have the same content as the original graph")
     return newrepograph
   def getgitmajorver(self) -> int:
-    m = re.search(r"^git version (\d+)", subprocess.run([self.optgit, "--version"], check=True, stdout=subprocess.PIPE).stdout.decode())
+    m = re.search(
+      r"^git version (\d+)",
+      subprocess.run(
+        [self.optgit, "--version"], check=True, stdout=subprocess.PIPE
+      ).stdout.decode()
+    )
     if m:
       return int(m.group(1))
     else:
       raise Exception("can't get git version")
   def getdotgitdir1(self, repo: str) -> str:
       # repo must be the root of the repository, not some other dir within it, for this function to return the correct result
-    return os.path.join(repo, subprocess.run([self.optgit, "-C", repo, "rev-parse", "--git-dir"], check=True, stdout=subprocess.PIPE).stdout.decode().rstrip())
+    return os.path.normpath(
+      os.path.join(
+        repo,
+        subprocess.run(
+          [self.optgit, "-C", repo, "rev-parse", "--git-dir"], check=True, stdout=subprocess.PIPE
+        ).stdout.decode().rstrip()
+      )
+    )
   def getgitsubmods(self, repo: str, recursive: bool=False) -> List[str]:
-    a=re.split(r"\r\n|\r|\n", subprocess.run([self.optgit, "-C", repo, "submodule", "foreach", "--quiet"]+(["--recursive"] if recursive else [])+["pwd"], check=True, stdout=subprocess.PIPE).stdout.decode())
+    a = re.split(
+      r"\r\n|\r|\n",
+      subprocess.run(
+        [self.optgit, "-C", repo, "submodule", "foreach", "--quiet"]+(["--recursive"] if recursive else [])+["pwd"], check=True, stdout=subprocess.PIPE
+      ).stdout.decode()
+    )
     if a[-1] == "": a = a[0:-1]
     return a
   def errprint(self, x: str):
