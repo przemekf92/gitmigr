@@ -96,6 +96,8 @@ class Gitmigr:
     self.optprintlvl: "Printlvl" = (DEFAULTPRINTLVL if optprintlvl is None else optprintlvl)
     self.optcolourlvl: "Printlvl" = (DEFAULTCOLOURLVL if optcolourlvl is None else optcolourlvl)
     self.optgit: str = ("git" if optgit is None else optgit)
+    if sys.platform == "win32":
+      self.warnprint("This utility is not well-tested on Windows outside of WSL. It may not work correctly. Using WSL is recommended.")
   def gitmigr(self, oldpat: str, newrepl: str, repos: List[str], optwrite: Optional[bool]=None, optsearch: Optional[bool]=None):
     if optwrite == None: optwrite = False
     if optsearch == None: optsearch = False
@@ -269,10 +271,15 @@ class Gitmigr:
       )
     )
   def getgitsubmods(self, repo: str, recursive: bool=False) -> List[str]:
+    if sys.platform != "win32":
+      pwdcmd = ["pwd"]
+    else:
+      pwdcmd = ["pwd -W"]
+        # With Git on Windows only the shell built-in "pwd" has "-W". ["pwd", "-W"] would use the external "pwd" which doesn't have "-W".
     a = re.split(
       r"\r\n|\r|\n",
       subprocess.run(
-        [self.optgit, "-C", repo, "submodule", "foreach", "--quiet"]+(["--recursive"] if recursive else [])+["pwd"], check=True, stdout=subprocess.PIPE
+        [self.optgit, "-C", repo, "submodule", "foreach", "--quiet"]+(["--recursive"] if recursive else [])+pwdcmd, check=True, stdout=subprocess.PIPE
       ).stdout.decode()
     )
     if a[-1] == "": a = a[0:-1]
