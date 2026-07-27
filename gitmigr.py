@@ -96,6 +96,8 @@ class Gitmigr:
     self.optprintlvl: "Printlvl" = (DEFAULTPRINTLVL if optprintlvl is None else optprintlvl)
     self.optcolourlvl: "Printlvl" = (DEFAULTCOLOURLVL if optcolourlvl is None else optcolourlvl)
     self.optgit: str = ("git" if optgit is None else optgit)
+    if sys.version_info < (3,6):
+      raise Exception("Python 3.6 or higher required")
     if sys.platform == "win32":
       self.warnprint("This utility is not well-tested on Windows outside of WSL. It may not work correctly. Using WSL is recommended.")
   def gitmigr(self, oldpat: str, newrepl: str, repos: List[str], optwrite: Optional[bool]=None, optsearch: Optional[bool]=None):
