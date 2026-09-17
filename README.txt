@@ -1,5 +1,8 @@
   Usage:
   ./gitmigr.py [OPT...] OLDPAT NEWREPL REPO...
+
+  If remote git repositories have been migrated to another location, this command-line utility can migrate local clones of these repositories by updating their configuration. Submodules are supported.
+
   OLDPAT: Old URL pattern in Python regex format
   NEWREPL: New URL replacement in Python regex format
   REPO: Path to the repository, either the root of the repository or .git inside the repository. You can pass multiple repositories.
